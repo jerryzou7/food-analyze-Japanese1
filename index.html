@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>食品カロリー分析</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="header-content">
+                <h1 class="title">
+                    <i class="fas fa-utensils"></i>
+                    食品カロリー分析
+                </h1>
+                <p class="subtitle">AI技術で食品の栄養とカロリーを分析</p>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <!-- API Key Section -->
+            <div class="api-key-section">
+                <h4><i class="fas fa-key"></i> Gemini APIキー</h4>
+                <input type="password" id="api-key-input" class="api-key-input" 
+                       placeholder="Gemini APIキーを入力してください" 
+                       value="AIzaSyCdGHAQIU03BL7w4bYRHbShCQ7MNo-BBrI">
+                <p style="margin-top: 10px; font-size: 0.9rem; color: #856404;">
+                    <i class="fas fa-info-circle"></i> 
+                    APIキーが有効で十分なクォータがあることを確認してください。APIキーは
+                    <a href="https://makersuite.google.com/app/apikey" target="_blank" style="color: #667eea;">Google AI Studio</a> で取得できます。
+                </p>
+            </div>
+
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="image">
+                    <i class="fas fa-camera"></i>
+                    画像分析
+                </button>
+                <button class="tab-btn" data-tab="text">
+                    <i class="fas fa-keyboard"></i>
+                    テキスト分析
+                </button>
+            </div>
+
+            <!-- Image Analysis Tab -->
+            <div class="tab-content active" id="image-tab">
+                <div class="upload-section">
+                    <div class="upload-area" id="upload-area">
+                        <div class="upload-content">
+                            <i class="fas fa-cloud-upload-alt upload-icon"></i>
+                            <h3>食品画像をアップロード</h3>
+                            <p>画像をここにドラッグ＆ドロップするか、クリックしてファイルを選択してください</p>
+                            <p style="font-size: 0.9rem; color: #718096; margin-top: 10px;">
+                                <i class="fas fa-mobile-alt"></i> 
+                                モバイルでは「画像を選択」でギャラリーから選ぶか、「写真を撮る」で直接撮影できます
+                            </p>
+                            <p style="font-size: 0.8rem; color: #a0aec0; margin-top: 5px;">
+                                <i class="fas fa-info-circle"></i> 
+                                大きな画像は自動圧縮に対応、最大20MBまで
+                            </p>
+                            <input type="file" id="image-input" accept="image/*,image/jpeg,image/png,image/webp,image/heic,image/heif" hidden>
+                            <input type="file" id="camera-input" accept="image/*,image/jpeg,image/png,image/webp,image/heic,image/heif" capture="environment" hidden>
+                            <div class="upload-buttons">
+                                <button class="upload-btn" onclick="selectImage()">
+                                    <i class="fas fa-image"></i>
+                                    画像を選択
+                                </button>
+                                <button class="upload-btn camera-btn" onclick="openCamera()" style="margin-left: 10px;">
+                                    <i class="fas fa-camera"></i>
+                                    写真を撮る
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="preview-section" id="preview-section" style="display: none;">
+                        <img id="preview-image" alt="Preview Image">
+                        <button class="analyze-btn" id="analyze-image-btn">
+                            <i class="fas fa-search"></i>
+                            画像を分析
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Text Analysis Tab -->
+            <div class="tab-content" id="text-tab">
+                <div class="text-input-section">
+                    <div class="input-group">
+                        <label for="food-description">食品の説明</label>
+                        <textarea 
+                            id="food-description" 
+                            placeholder="分析したい食品を説明してください。例：りんご、ご飯一杯、チョコレート一片など..."
+                            rows="4"
+                        ></textarea>
+                        <button class="analyze-btn" id="analyze-text-btn">
+                            <i class="fas fa-search"></i>
+                            テキストを分析
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div class="results-section" id="results-section" style="display: none;">
+                <div class="results-header">
+                    <h3><i class="fas fa-chart-bar"></i> 結果を分析する</h3>
+                    <button class="clear-btn" onclick="clearResults()">
+                        <i class="fas fa-times"></i>
+                        クリア
+                    </button>
+                </div>
+                <div class="results-content" id="results-content">
+                    <div class="loading" id="loading" style="display: none;">
+                        <div class="spinner"></div>
+                        <p>分析中です。お待ちください...</p>
+                    </div>
+                    <div class="compressing" id="compressing" style="display: none;">
+                        <div class="spinner"></div>
+                        <p>画像を圧縮中です。お待ちください...</p>
+                        <div class="compression-info" id="compression-info"></div>
+                    </div>
+                    <div class="analysis-result" id="analysis-result"></div>
+                    
+                    <!-- Debug Info Section -->
+                    <div class="debug-section" id="debug-section" style="display: none;">
+                        <h5><i class="fas fa-bug"></i> デバッグ情報</h5>
+                        <div class="debug-info" id="debug-info"></div>
+                    </div>
+                    
+                    <!-- Error Details -->
+                    <div class="error-details" id="error-details" style="display: none;">
+                        <h6><i class="fas fa-exclamation-triangle"></i> エラー詳細</h6>
+                        <div id="error-message"></div>
+                    </div>
+                    
+                    <!-- Solution Tips -->
+                    <div class="solution-tips" id="solution-tips" style="display: none;">
+                        <h6><i class="fas fa-lightbulb"></i> 考えられる解決策</h6>
+                        <ul>
+                            <li>ネットワーク接続を確認してください</li>
+                            <li>APIキーが正しいか有効か確認してください</li>
+                            <li>APIキーのクォータが十分か確認してください</li>
+                            <li>VPNやプロキシサーバーの利用を試してください</li>
+                            <li>ブラウザのコンソールでCORSエラーを確認してください</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <p>&copy; 食品カロリー分析. Jerryの2.5年のコーディング経験による開発</p>
+        </footer>
+    </div>
+
+    <script>
+        // DOM 要素
+        const tabBtns = document.querySelectorAll('.tab-btn');
+        const tabContents = document.querySelectorAll('.tab-content');
+        const uploadArea = document.getElementById('upload-area');
+        const imageInput = document.getElementById('image-input');
+        const cameraInput = document.getElementById('camera-input');
+        const previewSection = document.getElementById('preview-section');
+        const previewImage = document.getElementById('preview-image');
+        const analyzeImageBtn = document.getElementById('analyze-image-btn');
+        const analyzeTextBtn = document.getElementById('analyze-text-btn');
+        const foodDescription = document.getElementById('food-description');
+        const resultsSection = document.getElementById('results-section');
+        const loading = document.getElementById('loading');
+        const compressing = document.getElementById('compressing');
+        const compressionInfo = document.getElementById('compression-info');
+        const analysisResult = document.getElementById('analysis-result');
+        const apiKeyInput = document.getElementById('api-key-input');
+        const debugSection = document.getElementById('debug-section');
+        const debugInfo = document.getElementById('debug-info');
+        const errorDetails = document.getElementById('error-details');
+        const errorMessage = document.getElementById('error-message');
+        const solutionTips = document.getElementById('solution-tips');
+
+        let selectedFile = null;
+
+        // 標籤頁切換
+        tabBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const targetTab = btn.getAttribute('data-tab');
+                
+                // 更新按鈕狀態
+                tabBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                // 更新內容顯示
+                tabContents.forEach(content => {
+                    content.classList.remove('active');
+                    if (content.id === `${targetTab}-tab`) {
+                        content.classList.add('active');
+                    }
+                });
+                
+                // 清除結果
+                clearResults();
+            });
+        });
+
+        // 文件上傳處理
+        imageInput.addEventListener('change', handleFileSelect);
+        cameraInput.addEventListener('change', handleFileSelect);
+
+        // 圖片選擇和相機功能
+        function selectImage() {
+            imageInput.click();
+        }
+
+        function openCamera() {
+            cameraInput.click();
+        }
+
+        // 拖拽功能
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+
+        // 點擊上傳區域觸發文件選擇
+        uploadArea.addEventListener('click', (e) => {
+            // 避免點擊按鈕時觸發上傳區域的點擊事件
+            if (e.target.closest('.upload-btn')) {
+                return;
+            }
+            imageInput.click();
+        });
+
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (file) {
+                handleFile(file);
+            }
+        }
+
+        function handleFile(file) {
+            console.log('處理文件:', file.name, file.type, file.size);
+            
+            // 檢查文件類型
+            const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/heic', 'image/heif', 'image/gif'];
+            const isValidType = validTypes.includes(file.type.toLowerCase()) || file.type.startsWith('image/');
+            
+            if (!isValidType) {
+                showError('Please select a valid image file (JPEG, PNG, WebP, HEIC, GIF)');
+                return;
+            }
+            
+            // 檢查文件大小 (限制為 20MB，超過會自動壓縮)
+            const maxSize = 20 * 1024 * 1024; // 20MB
+            if (file.size > maxSize) {
+                showCompressing('Image file is too large, compressing automatically...', file.size);
+                compressImage(file).then(compressedFile => {
+                    hideCompressing();
+                    if (compressedFile) {
+                        selectedFile = compressedFile;
+                        showPreview(compressedFile);
+                        console.log('圖片壓縮成功:', compressedFile.name, '大小:', (compressedFile.size / 1024 / 1024).toFixed(2) + 'MB');
+                    } else {
+                        showError('Image compression failed, please select a smaller image');
+                    }
+                });
+                return;
+            }
+            
+            selectedFile = file;
+            showPreview(file);
+        }
+
+        function showPreview(file) {
+            // 顯示預覽
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                previewImage.src = e.target.result;
+                uploadArea.style.display = 'none';
+                previewSection.style.display = 'block';
+                
+                // 顯示文件信息
+                console.log('文件預覽成功:', file.name, '大小:', (file.size / 1024 / 1024).toFixed(2) + 'MB');
+            };
+            reader.onerror = (error) => {
+                console.error('讀取文件時出錯:', error);
+                showError('Error reading image file, please try again');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function compressImage(file) {
+            return new Promise((resolve) => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const img = new Image();
+                
+                img.onload = () => {
+                    // 計算壓縮後的尺寸
+                    let { width, height } = img;
+                    const originalSize = file.size;
+                    
+                    // 根據原始文件大小動態調整壓縮參數
+                    let maxDimension, quality;
+                    
+                    if (originalSize > 15 * 1024 * 1024) { // 大於 15MB
+                        maxDimension = 1280;
+                        quality = 0.6;
+                    } else if (originalSize > 10 * 1024 * 1024) { // 大於 10MB
+                        maxDimension = 1600;
+                        quality = 0.7;
+                    } else if (originalSize > 5 * 1024 * 1024) { // 大於 5MB
+                        maxDimension = 1920;
+                        quality = 0.8;
+                    } else {
+                        maxDimension = 2048;
+                        quality = 0.85;
+                    }
+                    
+                    // 保持寬高比進行縮放
+                    if (width > height && width > maxDimension) {
+                        height = (height * maxDimension) / width;
+                        width = maxDimension;
+                    } else if (height > maxDimension) {
+                        width = (width * maxDimension) / height;
+                        height = maxDimension;
+                    }
+                    
+                    // 設置 canvas 尺寸
+                    canvas.width = width;
+                    canvas.height = height;
+                    
+                    // 繪製壓縮後的圖片
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    // 轉換為 Blob
+                    canvas.toBlob((blob) => {
+                        if (blob) {
+                            // 創建新的 File 對象
+                            const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, '.jpg'), {
+                                type: 'image/jpeg',
+                                lastModified: Date.now()
+                            });
+                            
+                            const originalMB = (originalSize / 1024 / 1024).toFixed(2);
+                            const compressedMB = (compressedFile.size / 1024 / 1024).toFixed(2);
+                            const compressionRatio = ((1 - compressedFile.size / originalSize) * 100).toFixed(1);
+                            
+                            console.log(`壓縮完成: ${originalMB}MB → ${compressedMB}MB (減少 ${compressionRatio}%)`);
+                            
+                            // 更新壓縮信息
+                            compressionInfo.innerHTML = `
+                                <div style="margin-top: 10px; font-size: 0.9rem; color: #718096;">
+                                    原始大小: ${originalMB} MB<br>
+                                    壓縮後: ${compressedMB} MB<br>
+                                    壓縮率: ${compressionRatio}%
+                                </div>
+                            `;
+                            
+                            resolve(compressedFile);
+                        } else {
+                            resolve(null);
+                        }
+                    }, 'image/jpeg', quality);
+                };
+                
+                img.onerror = () => {
+                    resolve(null);
+                };
+                
+                img.src = URL.createObjectURL(file);
+            });
+        }
+
+        // 分析圖片
+        analyzeImageBtn.addEventListener('click', async () => {
+            if (!selectedFile) {
+                showError('Please select an image first');
+                return;
+            }
+            
+            const apiKey = apiKeyInput.value.trim();
+            if (!apiKey) {
+                showError('Please enter Gemini API Key');
+                return;
+            }
+            
+            await analyzeImage(selectedFile, apiKey);
+        });
+
+        // 分析文字
+        analyzeTextBtn.addEventListener('click', async () => {
+            const description = foodDescription.value.trim();
+            if (!description) {
+                showError('Please enter food description');
+                return;
+            }
+            
+            const apiKey = apiKeyInput.value.trim();
+            if (!apiKey) {
+                showError('Please enter Gemini API Key');
+                return;
+            }
+            
+            await analyzeText(description, apiKey);
+        });
+
+        async function analyzeImage(file, apiKey) {
+            try {
+                showLoading();
+                hideDebugInfo();
+                
+                // 將圖片轉換為 base64
+                const base64Image = await fileToBase64(file);
+                
+                const requestBody = {
+                    contents: [{
+                        parts: [
+                            {
+                                text: "この食品画像を分析し、以下の情報を提供してください：1. 食品名（日本語）2. 推定カロリー 3. 主な栄養成分 4. 健康アドバイス。日本語で回答し、分かりやすく読みやすい形式でお願いします。"
+                            },
+                            {
+                                inline_data: {
+                                    mime_type: 'image/jpeg', // 強制寫死
+                                    data: base64Image
+                                }
+                            }
+                        ]
+                    }]
+                };
+
+                // 圖片分析 API 路徑
+                const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+                
+                console.log('發送請求到:', url);
+                console.log('請求體:', JSON.stringify(requestBody, null, 2));
+
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+
+                console.log('響應狀態:', response.status);
+                console.log('響應頭:', Object.fromEntries(response.headers.entries()));
+
+                const data = await response.json();
+                console.log('響應數據:', data);
+                
+                if (response.ok && data.candidates && data.candidates[0]) {
+                    const analysis = data.candidates[0].content.parts[0].text;
+                    showResults(analysis);
+                } else {
+                    const errorMsg = data.error?.message || data.error?.details?.[0]?.message || 'Analysis failed';
+                    showDetailedError(errorMsg, response.status, data);
+                }
+            } catch (error) {
+                console.error('分析圖片時出錯:', error);
+                showDetailedError(error.message, null, null, error);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        async function analyzeText(description, apiKey) {
+            try {
+                showLoading();
+                hideDebugInfo();
+                
+                const requestBody = {
+                    contents: [{
+                        parts: [{
+                            text: `この食品説明を分析し、詳細な栄養情報を提供してください：${description}。以下を提供してください：1. 食品名（日本語）2. 推定カロリー 3. 主な栄養成分（たんぱく質、炭水化物、脂質、食物繊維など）4. 健康アドバイス。日本語で回答し、分かりやすく読みやすい形式でお願いします。`
+                        }]
+                    }]
+                };
+
+                // 文字分析 API 路徑
+                const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+                
+                console.log('發送請求到:', url);
+                console.log('請求體:', JSON.stringify(requestBody, null, 2));
+
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+
+                console.log('響應狀態:', response.status);
+                console.log('響應頭:', Object.fromEntries(response.headers.entries()));
+
+                const data = await response.json();
+                console.log('響應數據:', data);
+                
+                if (response.ok && data.candidates && data.candidates[0]) {
+                    const analysis = data.candidates[0].content.parts[0].text;
+                    showResults(analysis);
+                } else {
+                    const errorMsg = data.error?.message || data.error?.details?.[0]?.message || 'Analysis failed';
+                    showDetailedError(errorMsg, response.status, data);
+                }
+            } catch (error) {
+                console.error('分析文字時出錯:', error);
+                showDetailedError(error.message, null, null, error);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    // 只取逗號後的純 base64
+                    const base64 = reader.result.split(',')[1];
+                    resolve(base64);
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function showLoading() {
+            loading.style.display = 'block';
+            analysisResult.style.display = 'none';
+            resultsSection.style.display = 'block';
+        }
+
+        function hideLoading() {
+            loading.style.display = 'none';
+        }
+
+        function showCompressing(message, originalSize) {
+            compressing.style.display = 'block';
+            compressionInfo.innerHTML = `
+                <div style="margin-top: 10px; font-size: 0.9rem; color: #718096;">
+                    原始大小: ${(originalSize / 1024 / 1024).toFixed(2)} MB<br>
+                    正在優化圖片質量...
+                </div>
+            `;
+            resultsSection.style.display = 'block';
+        }
+
+        function hideCompressing() {
+            compressing.style.display = 'none';
+        }
+
+        function showResults(analysis) {
+            analysisResult.textContent = analysis;
+            analysisResult.style.display = 'block';
+            resultsSection.style.display = 'block';
+            hideDebugInfo();
+            
+            // 滾動到結果區域
+            resultsSection.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function showDetailedError(message, status, responseData, originalError) {
+            const errorText = `Error: ${message}`;
+            analysisResult.textContent = errorText;
+            analysisResult.style.display = 'block';
+            resultsSection.style.display = 'block';
+            
+            // 顯示調試信息
+            showDebugInfo(status, responseData, originalError);
+            
+            // 顯示錯誤詳情
+            if (originalError || status) {
+                errorDetails.style.display = 'block';
+                let errorDetailsText = `Error information: ${message}\n`;
+                
+                if (status) {
+                    errorDetailsText += `HTTP Status Code: ${status}\n`;
+                }
+                
+                if (originalError) {
+                    errorDetailsText += `Original error: ${originalError.message}\n`;
+                    errorDetailsText += `Error type: ${originalError.name}\n`;
+                }
+                
+                if (responseData && responseData.error) {
+                    errorDetailsText += `API error details: ${JSON.stringify(responseData.error, null, 2)}\n`;
+                }
+                
+                errorMessage.textContent = errorDetailsText;
+            }
+            
+            // 顯示解決方案提示
+            solutionTips.style.display = 'block';
+            
+            // 滾動到結果區域
+            resultsSection.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function showError(message) {
+            showDetailedError(message);
+        }
+
+        function showDebugInfo(status, responseData, originalError) {
+            debugSection.style.display = 'block';
+            let debugText = `Time: ${new Date().toLocaleString()}\n`;
+            debugText += `User Agent: ${navigator.userAgent}\n`;
+            debugText += `Network Connection: ${navigator.onLine ? 'Online' : 'Offline'}\n`;
+            
+            if (status) {
+                debugText += `HTTP Status Code: ${status}\n`;
+            }
+            
+            if (responseData) {
+                debugText += `API Response: ${JSON.stringify(responseData, null, 2)}\n`;
+            }
+            
+            if (originalError) {
+                debugText += `Error Stack: ${originalError.stack}\n`;
+            }
+            
+            debugInfo.textContent = debugText;
+        }
+
+        function hideDebugInfo() {
+            debugSection.style.display = 'none';
+            errorDetails.style.display = 'none';
+            solutionTips.style.display = 'none';
+        }
+
+        function clearResults() {
+            resultsSection.style.display = 'none';
+            analysisResult.textContent = '';
+            loading.style.display = 'none';
+            hideCompressing();
+            hideDebugInfo();
+            
+            // 重置圖片上傳
+            if (selectedFile) {
+                selectedFile = null;
+                imageInput.value = '';
+                cameraInput.value = '';
+                uploadArea.style.display = 'block';
+                previewSection.style.display = 'none';
+                previewImage.src = '';
+            }
+            
+            // 清空文字輸入
+            foodDescription.value = '';
+        }
+
+        // 全局函數供 HTML 調用
+        window.clearResults = clearResults;
+        window.selectImage = selectImage;
+        window.openCamera = openCamera;
+
+        // 添加鍵盤快捷鍵
+        document.addEventListener('keydown', (e) => {
+            // Ctrl/Cmd + Enter 分析文字
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                const activeTab = document.querySelector('.tab-btn.active');
+                if (activeTab && activeTab.getAttribute('data-tab') === 'text') {
+                    analyzeTextBtn.click();
+                }
+            }
+        });
+
+        // 添加錯誤處理
+        window.addEventListener('error', (e) => {
+            console.error('JavaScript error:', e.error);
+        });
+
+        // 添加未處理的 Promise 拒絕處理
+        window.addEventListener('unhandledrejection', (e) => {
+            console.error('Unhandled Promise Rejection:', e.reason);
+            showDetailedError('An unknown error occurred, please try again later', null, null, e.reason);
+        });
+
+        // 頁面加載時檢查網絡連接和設備信息
+        window.addEventListener('load', () => {
+            if (!navigator.onLine) {
+                showError('You are currently offline, please check your network connection');
+            }
+            
+            // 檢測設備類型
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            
+            console.log('Device Information:', {
+                userAgent: navigator.userAgent,
+                isIOS: isIOS,
+                isMobile: isMobile,
+                platform: navigator.platform
+            });
+            
+            // 為 iOS 設備添加特殊處理
+            if (isIOS) {
+                console.log('Detected iOS device, enabling special handling');
+                // 可以添加 iOS 特定的功能
+            }
+        });
+
+        // 監聽網絡狀態變化
+        window.addEventListener('online', () => {
+            console.log('Network connected');
+        });
+
+        window.addEventListener('offline', () => {
+            showError('Network connection lost, please check your network settings');
+        });
+    </script>
+</body>
+</html> 
